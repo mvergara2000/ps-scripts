@@ -15,69 +15,80 @@ from datetime import timedelta
 import json
 from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
-
+from cryptography.fernet import Fernet
 
 
 #to do loop through grades, 
 def main():
 
- chrome_options= webdriver.ChromeOptions()
- chrome_options.add_argument("--headless=chrome")
- chrome_options.add_argument("--no-sandbox")
- chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options= webdriver.ChromeOptions()
+    chrome_options.add_argument("--headless=chrome")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")\
     
+ #generate key and open key.key
+
+#opens key.key and assigns the key stored as key
+
+# 
+ 
  #chrome_prefs = {"download.default_directory": r"C:\path\to\Downloads"} # (windows)
  #chrome_options.experimental_options["prefs"] = chrome_prefs
 
     
- ROOT_DIR = os.path.realpath(os.path.join(os.path.dirname(__file__)))
+    ROOT_DIR = os.path.realpath(os.path.join(os.path.dirname(__file__)))
+    key = Fernet.generate_key()
+
+    if os.path.exists('pslogin.json'):
+        print("Logging In...")
+    else:
+        getLogin()
+        encrypt(key)
+ 
+    f = open('pslogin.json')
+    
  
 
- if os.path.exists('pslogin.json'):
-    print("Logging In...")
- else:
-    getLogin()
 
-        
- f= open("pslogin.json")
- login= json.load(f)
- grade=2
- driver = webdriver.Chrome(options=chrome_options)
+    login= json.load(f)
+    grade=2
+    driver = webdriver.Chrome(options=chrome_options)
  #
-# url = "https://powerschool.npd117.net/admin/pw.html"
+ # url = "https://powerschool.npd117.net/admin/pw.html"
  
- logIn(driver,login)
- findSchool(driver,login)
- f.close()
- while grade < 6:
+    logIn(driver,login)
+    findSchool(driver,login)
+    f.close()
+    while grade < 6:
     
     
-    hn=os.environ["USERNAME"]
-    path1= "C:/Users/"+hn+ "/Downloads/"
+        hn=os.environ["USERNAME"]
+        path1= "C:/Users/"+hn+ "/Downloads/"
    #read_file=pd.DataFrame()
-    currGrade="grade_"+str(grade)
+        currGrade="grade_"+str(grade)
     
    # print("Now pulling Grade "+ str(grade))
-    findGrade(driver,currGrade)
-    export(driver)
-    if grade == 5:
-        driver.quit()  
+        findGrade(driver,currGrade)
+        export(driver)
+        if grade == 5:
+            driver.quit()  
     
-    grade+=1
+        grade+=1
+        encrypt(key)
  #print(grade)
-
- grade-=1
- filePos=grade-grade
- while grade > 1:
-  convertToXlsx(path1, grade, filePos,ROOT_DIR)
-  grade-=1
-  filePos+=2
+    
+    grade-=1
+    filePos=grade-grade
+    while grade > 1:
+        convertToXlsx(path1, grade, filePos,ROOT_DIR)
+        grade-=1
+        filePos+=2
 def getLogin():
    
     username=input('Enter Username: ')
     password=input('Enter Password: ')
     url = input('Enter URL: ')
-    school = input('Enter school(GO, CN, OR): ')
+    school = input('Enter school(GO or OR): ')
     if school == 'OR' or 'or':
         school= 'school_5'
     elif school == 'GO' or 'go':
@@ -93,7 +104,42 @@ def getLogin():
     
     json_object = json.dumps(dictionary, indent=4)
     with open("pslogin.json", "w") as outfile:
-     outfile.write(json_object)    
+     outfile.write(json_object) 
+    
+ 
+        
+def encrypt(key):
+    # string the key in a file
+    with open('filekey.key', 'wb') as filekey:
+        filekey.write(key)
+
+
+    # opening the key
+    with open('filekey.key', 'rb') as filekey:
+        key = filekey.read()
+ 
+    # using the generated key
+    fernet = Fernet(key)
+ 
+    # opening the original file to encrypt
+    with open('pslogin.json', 'rb') as file:
+        original = file.read()
+     
+    # encrypting the file
+    encrypted = fernet.encrypt(original) 
+    with open('pslogin.json', 'wb') as encrypted_file:
+        encrypted_file.write(encrypted)
+def decrypt(key):
+    
+    fernet = Fernet(key)
+ 
+ # opening the encrypted file
+    with open('pslogin.json', 'rb') as enc_file:
+        encrypted = enc_file.read()
+ 
+ # decrypting the file
+    decrypted = fernet.decrypt(encrypted)
+
 def logIn(driver, login):
     #uses user input to login
     
