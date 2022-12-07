@@ -17,8 +17,7 @@ from pydrive.auth import GoogleAuth
 from pydrive.drive import GoogleDrive
 from cryptography.fernet import Fernet
 
-
-#to do loop through grades, 
+ 
 def main():
 
     chrome_options= webdriver.ChromeOptions()
@@ -37,19 +36,20 @@ def main():
 
     
     ROOT_DIR = os.path.realpath(os.path.join(os.path.dirname(__file__)))
-    key = Fernet.generate_key()
+    driver.f
+    
+    if os.path.exists('filekey.key'):
+        k = open('filekey.key')
+        key = k.read()
+        
 
     if os.path.exists('pslogin.json'):
         print("Logging In...")
     else:
-        getLogin()
+        key = getLogin()
         encrypt(key)
- 
+    decrypt(key)
     f = open('pslogin.json')
-    
- 
-
-
     login= json.load(f)
     grade=2
     driver = webdriver.Chrome(options=chrome_options)
@@ -74,7 +74,7 @@ def main():
             driver.quit()  
     
         grade+=1
-        encrypt(key)
+    encrypt(key)
  #print(grade)
     
     grade-=1
@@ -106,14 +106,17 @@ def getLogin():
     with open("pslogin.json", "w") as outfile:
      outfile.write(json_object) 
     
+    key = Fernet.generate_key()
+    
+ 
+# string the key in a file
+    with open('filekey.key', 'wb') as filekey:
+        filekey.write(key)
+    return key
+    
  
         
 def encrypt(key):
-    # string the key in a file
-    with open('filekey.key', 'wb') as filekey:
-        filekey.write(key)
-
-
     # opening the key
     with open('filekey.key', 'rb') as filekey:
         key = filekey.read()
@@ -126,20 +129,27 @@ def encrypt(key):
         original = file.read()
      
     # encrypting the file
-    encrypted = fernet.encrypt(original) 
+    encrypted = fernet.encrypt(original)
+ 
+# opening the file in write mode and
+# writing the encrypted data
     with open('pslogin.json', 'wb') as encrypted_file:
         encrypted_file.write(encrypted)
 def decrypt(key):
-    
+    # using the key
     fernet = Fernet(key)
  
- # opening the encrypted file
-    with open('pslogin.json', 'rb') as enc_file:
+# opening the encrypted file
+    with open('test.json', 'rb') as enc_file:
         encrypted = enc_file.read()
  
- # decrypting the file
+# decrypting the file
     decrypted = fernet.decrypt(encrypted)
-
+ 
+# opening the file in write mode and
+# writing the decrypted data
+    with open('test.json', 'wb') as dec_file:
+        dec_file.write(decrypted)
 def logIn(driver, login):
     #uses user input to login
     

@@ -1,0 +1,12 @@
+import os
+#os.system('python -m pip install pygame')
+#os.system('python -m pip install selenium')
+#os.system('python -m pip install pathlib')
+#os.system('python -m pip install time')
+#os.system('python -m pip install datetime')
+#os.system('python -m pip install json')
+#os.system('python -m pip install pandas')
+#os.system('python -m pip install webdriver-manager')
+#os.system('python -m pip install cryptography')
+#os.system('python -m pip install PyPDF2')
+os.system('python -m pip install import xlsxwriter')
