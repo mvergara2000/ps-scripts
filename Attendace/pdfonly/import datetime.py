@@ -1,3 +1,17 @@
+from datetime import datetime
+from datetime import timedelta
+import os
+import PyPDF2
+import io
+from openpyxl import Workbook
+from openpyxl import load_workbook
+from openpyxl.utils.dataframe import dataframe_to_rows
+from openpyxl.chart import( 
+    PieChart,
+    Reference
+)
+import pandas as pd
+import math
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 import os
@@ -25,197 +39,11 @@ from openpyxl.utils.exceptions import WorkbookAlreadySaved
 
 import math
 
-def main():
-    warnings.filterwarnings("ignore")
-    chrome_options= webdriver.ChromeOptions()
-    chrome_options.add_argument("--headless=chrome")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_experimental_option('prefs',  {
-    
-    "download.prompt_for_download": False,
-    "download.directory_upgrade": True,
-    "plugins.always_open_pdf_externally": True
-    }
-)
- #generate key and open key.key
-
-#opens key.key and assigns the key stored as key
-
-# 
- 
- #chrome_prefs = {"download.default_directory": r"C:\path\to\Downloads"} # (windows)
- #chrome_options.experimental_options["prefs"] = chrome_prefs
-
-    
-    ROOT_DIR = os.path.realpath(os.path.join(os.path.dirname(__file__)))
+def processPDF():
     
     today=datetime.now()
-    todayFormatted=today.strftime('%m/%d/%Y')
-    #print(todayFormatted)
-    if os.path.exists('filekey.key'):
-        k = open('filekey.key')
-        key = k.read()
-        
-
-    if os.path.exists('pslogin.json'):
-        print("Logging In...")
-    else:
-        key = getLogin()
-        encrypt(key)
-    decrypt(key)
-    f = open('pslogin.json')
-    login= json.load(f)
-    
-    driver = webdriver.Chrome(options=chrome_options)
- #
- # url = "https://powerschool.npd117.net/admin/pw.html"
- 
-    logIn(driver,login)
-    
-    
-    encrypt(key)
-    hn=os.environ["USERNAME"]
-    path1= "C:/Users/"+hn+ "/Downloads/"
-    findSchool(driver,login)
-    getabsentees(driver,todayFormatted)
-  
-    #export(driver)
-        
-    
- #print(grade)
-    time.sleep(10)
-    processPDF(login)
-    f.close()
-    #convertToXlsx(path1, grade, filePos,ROOT_DIR)
-
-
-def getLogin():
-   
-    username=input('Enter Username: ')
-    password=input('Enter Password: ')
-    school = input('Enter school(GO or OR): ')
-    threshold = input('Enter Percentage to stay above: ')
-    if school == 'OR' or 'or':
-        school= 'school_5'
-    elif school == 'GO' or 'go':
-        school='school_4'
-    elif school == 'CN' or 'cn':
-        school='school_3'
-    dictionary = {
-        "username": username,
-        "password": password,
-        
-        "school": school,
-        "threshold": threshold
-        
-    }
-    
-    json_object = json.dumps(dictionary, indent=4)
-    with open("pslogin.json", "w") as outfile:
-     outfile.write(json_object) 
-    
-    key = Fernet.generate_key()
-    
- 
-# string the key in a file
-    with open('filekey.key', 'wb') as filekey:
-        filekey.write(key)
-    return key
-    
- 
-        
-def encrypt(key):
-    # opening the key
-    with open('filekey.key', 'rb') as filekey:
-        key = filekey.read()
- 
-    # using the generated key
-    fernet = Fernet(key)
- 
-    # opening the original file to encrypt
-    with open('pslogin.json', 'rb') as file:
-        original = file.read()
-     
-    # encrypting the file
-    encrypted = fernet.encrypt(original)
- 
-# opening the file in write mode and
-# writing the encrypted data
-    with open('pslogin.json', 'wb') as encrypted_file:
-        encrypted_file.write(encrypted)
-
-def decrypt(key):
-    # using the key
-    fernet = Fernet(key)
- # opening the encrypted file
-    with open('pslogin.json', 'rb') as enc_file:
-        encrypted = enc_file.read()
- # decrypting the file
-    decrypted = fernet.decrypt(encrypted)
-# opening the file in write mode and
-# writing the decrypted data
-    with open('pslogin.json', 'wb') as dec_file:
-        dec_file.write(decrypted)
-def logIn(driver, login):
-    #uses user input to login
-    
-   
-    userName=login['username']
-    passWord = login['password']
-    
-    driver.get('https://powerschool.npd117.net/admin/pw.html')
-    input= driver.find_element("id","fieldUsername")
-    input.send_keys(userName)
-    input= driver.find_element("id","fieldPassword")
-    input.send_keys(passWord)
-    input.submit()
-    time.sleep(3)#change this to wait for element to load
-
-def getabsentees(driver,date):
-    url = "https://powerschool.npd117.net/admin/reports_engine/report_w_param.html?ac=reports_get_using_ID;repo_ID=PSPRE_CLASS_AUDIT"
-    driver.get(url)
-    
-    radio=driver.find_elements(By.NAME,"param_reportDates")
-    radio[1].click()
-    
-    day=driver.find_element(By.NAME,"param_startdate")
-    day.clear()
-    day.send_keys(date)#start date
-    day=driver.find_element(By.NAME,"param_enddate")
-    day.clear()
-    day.send_keys(date)#start date
-    
-   
-  
-    driver.find_element("name","param_cb9;1").click()
-    driver.find_element("id","btnSubmit").click()
-    url = driver.current_url
-    time.sleep(20)
-    driver.find_element("id","prReloadButton").click()
-    driver.find_element(By.LINK_TEXT,"View").click()
-    save=ActionChains(driver)
-    save.key_down(Keys.CONTROL).send_keys('S').key_up(Keys.CONTROL).perform()
-    time.sleep(10)
-    time.sleep(10)
- 
-def findSchool(driver,login):
-    school = login['school']
-    print("Finding school...")
-    url = driver.current_url
-    driver.get(url)
-    schoolpicker=driver.find_element("id","adminSchoolPicker")
-    schoolpicker.click()
-    time.sleep(4)
-    schoolpicker=driver.find_element("id",school)
-    schoolpicker.click()
-    time.sleep(4) 
-
-
-def processPDF(login):
-    today=datetime.now()
-    todayFormatted=today.strftime('%m/%d/%Y')
-    forFile = today.strftime(('%m%d%Y'))
+    todayFormatted='11/28/2022'#today.strftime('%m/%d/%Y')
+    forFile = '11282022'#today.strftime(('%m%d%Y'))
     df=pd.DataFrame(columns = ['Date', 'Grade', 'Classroom', 'Day Membership Possible','# of students Absent', 'Day Attendance','# of students Attending'])
     if os.path.exists('classRoomAttendanceIncentive.xlsx'):
         print('The File Already Exists')
@@ -276,11 +104,11 @@ def processPDF(login):
                     #"# of students Absent: "+ 
                     percent= attendance/membership
                     percent=percent*100
-                    if percent>int(login['threshold']):
+                    if percent>90:
                         abovex=1
                     else:
                         abovex=0
-                    df = df.append({'Date':todayFormatted, 'Classroom':teacher,'Grade':grade,'Day Membership Possible':membership,'# of students Absent': absent, 'Day Attendance':attendance,'# of students Attending':math.ceil(percent), 'Above'+ login['threshold']: abovex},ignore_index = True)
+                    df = df.append({'Date':todayFormatted, 'Classroom':teacher,'Grade':grade,'Day Membership Possible':membership,'# of students Absent': absent, 'Day Attendance':attendance,'# of students Attending':math.ceil(percent), 'Above 90': abovex},ignore_index = True)
                 #print(str(absent)) , "% "+ "days above "+ login['threshold']: per
                 t=0
     pdfFile.close()
@@ -289,7 +117,7 @@ def processPDF(login):
     
     teacherList=df['Classroom'].values.tolist()
     gradeList=df['Grade'].values.tolist()
-    above=df['Above'+ login['threshold']].values.tolist()
+    above=df['Above 90'].values.tolist()
     membership= df['Day Membership Possible'].values
     if os.path.exists("classRoomAttendanceIncentive.xlsx"):
         print("file does exist")
@@ -327,7 +155,7 @@ def processPDF(login):
         worksheet['E1']= '# of students Absent'
         worksheet['F1']= 'Day Attendance'
         worksheet['G1']= '# of students Attending'
-        worksheet['H1']= 'Above '+str(login['threshold'])
+        worksheet['H1']= 'Above 90'
           
     else:
         if not forFile in book.sheetnames:
@@ -365,10 +193,10 @@ def processPDF(login):
             worksheet[celle]=gradeList[x-2]
             x+=1
             #
-        worksheet['B1']= 'Number of days above'+ login['threshold']
+        worksheet['B1']= 'Number of days above 90'
         worksheet['A1']= 'Class Room'
         worksheet['C1']= 'Total school Days'
-        worksheet['D1']= '% days above'+ str(login['threshold'])
+        worksheet['D1']= '% days above 90'
         worksheet['E1']= 'Grade'
 
 
@@ -400,13 +228,12 @@ def processPDF(login):
     chart.set_categories(cats)
     chart.title="Total Classroom Attendance %"
     chart.x_axis.title="Classroom"
-    chart.y_axis.title="% Days Above"+login['threshold']
+    chart.x_axis.title="% Days Above 90"
     worksheet.add_chart(chart,"G1")
     book.save('classRoomAttendanceIncentive.xlsx')
     book.close()
   
 
-
-    
 if __name__=="__main__":
-    main()
+    processPDF()
+    
